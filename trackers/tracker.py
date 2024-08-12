@@ -4,6 +4,7 @@ import supervision as sv
 class Tracker:
     def __init__(self, model_path) -> None:
         self.model = YOLO(model_path)
+        self.tracker = sv.ByteTrack()
 
     def detect_frames(self, frames):
         batch_size=20 
@@ -16,6 +17,12 @@ class Tracker:
 
     def get_object_tracks(self, frames):
         detections = self.detect_frames(frames)
+
+        tracks={
+            "players":[],
+            "referees":[],
+            "ball":[]
+        }
 
         # Remove goalkeeper class
         for frame_num, detection in enumerate(detections):
@@ -30,6 +37,16 @@ class Tracker:
                 if cls_names[class_id] == "goalkeeper":
                     detection_supervision.class_id[object_ind] = cls_names_inv["player"]
 
-            print(detection_supervision)
+            # Track objects
+            detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
 
-            break
+            tracks["players"].append({})
+            tracks["referees"].append({})
+            tracks["ball"].append({})
+
+            for frame_detection in detection_with_tracks:
+                bbox = frame_detection[0].tolist()
+                cls_id = frame_detection[3]
+                track_id = frame_detection[4]
+
+            print(detection_with_tracks)
