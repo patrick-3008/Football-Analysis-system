@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 import supervision as sv
+import numpy as np
 import pickle
 import cv2
 import os
@@ -81,6 +82,20 @@ class Tracker:
 
         return tracks
 
+    def draw_traingle(self,frame,bbox,color):
+        y= int(bbox[1])
+        x,_ = get_center_of_bbox(bbox)
+
+        triangle_points = np.array([
+            [x,y],
+            [x-10,y-20],
+            [x+10,y-20],
+        ])
+        cv2.drawContours(frame, [triangle_points],0,color, cv2.FILLED)
+        cv2.drawContours(frame, [triangle_points],0,(0,0,0), 2) # border
+
+        return frame
+    
     def draw_ellipse(self, frame, bbox, color, track_id=None):
             y2 = int(bbox[3])
             x_center, _ = get_center_of_bbox(bbox)
@@ -108,7 +123,7 @@ class Tracker:
             if track_id is not None:
                 cv2.rectangle(
                     frame,
-                    (int(x1_rect),int(y1_rect) ),
+                    (int(x1_rect),int(y1_rect)),
                     (int(x2_rect),int(y2_rect)),
                     color,
                     cv2.FILLED,
@@ -136,11 +151,21 @@ class Tracker:
             frame = frame.copy()
 
             player_dict = tracks["players"][frame_num]
+            ball_dict = tracks["ball"][frame_num]
+            referee_dict = tracks["referees"][frame_num]
 
             # Draw players
             for track_id, player in player_dict.items():
                 color = player.get("team_color",(0,0,255))
                 frame = self.draw_ellipse(frame, player["bbox"],color, track_id)
+
+            # Draw Referee
+            for _, referee in referee_dict.items():
+                frame = self.draw_ellipse(frame, referee["bbox"],(0,255,255))
+
+            # Draw ball 
+            for track_id, ball in ball_dict.items():
+                frame = self.draw_traingle(frame, ball["bbox"],(0,255,0))
 
             output_video_frames.append(frame)
 
